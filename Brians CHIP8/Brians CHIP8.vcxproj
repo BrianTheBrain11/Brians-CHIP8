@@ -135,11 +135,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="interpreter.c" />
+    <ClCompile Include="interpreter_loader.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="screen_manager.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="1-chip8-logo.ch8" />
     <None Include="test.ch8" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Chip8Context.h" />
+    <ClInclude Include="interpreter.h" />
+    <ClInclude Include="interpreter_loader.h" />
+    <ClInclude Include="screen_manager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
