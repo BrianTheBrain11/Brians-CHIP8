@@ -31,19 +31,21 @@ void handle_D(uint16_t op, Chip8Context* context)
 	uint8_t* sprite = calloc((size_t)sprite_length, sizeof(uint8_t));
 	if (sprite == NULL)
 		return;
+
 	memcpy(sprite, context->memoryMap + start_address, sprite_length);
 
 	DEBUG_PRINT("SPRITE TO DRAW\n");
 	for (int i = 0; i < sprite_length; i++)
 	{
-		uint8_t debug_sprite = sprite[i];
-		while (debug_sprite) {
-			if (debug_sprite & 1)
+		uint8_t debug_row = sprite[i];
+		for (int bit = 0; bit < 8; bit++)
+		{
+			if (debug_row & 0x80)
 				printf("1");
 			else
 				printf("0");
 
-			debug_sprite >>= 1;
+			debug_row <<= 1;
 		}
 		printf("\n");
 	}

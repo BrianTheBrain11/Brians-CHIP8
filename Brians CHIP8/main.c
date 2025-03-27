@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "setjmp.h"
+#include <stdbool.h>
 
 #include "Chip8Context.h"
 #include "interpreter_loader.h"
@@ -42,7 +43,7 @@ void dump_memory()
 	printf("\n");
 
 	printf("PC: %02X\n", context.PC);
-	printf("SP: %02X\n", context.SP);
+	printf("SP: %02X\n", *context.SP);
 	printf("\n");
 }
 
@@ -136,30 +137,40 @@ int main(int argc, char** argv)
 	SDL_SetRenderDrawColor(context.renderer, 0, 0, 0, 0);
 	SDL_RenderClear(context.renderer);
 
-	//for (int i = 0; i < WINDOW_WIDTH; i++)
-	//{
-	//	SDL_RenderDrawPoint(context.renderer, i, i);
-	//}
+	for (int i = 0; i < WINDOW_WIDTH; i++)
+	{
+		SDL_RenderDrawPoint(context.renderer, i, i);
+	}
 
 	SDL_RenderPresent(context.renderer);
 
 	// start at 0x200
 	context.PC = 0x200;
 
+	bool run = false;
+
 	while (1) // main program loop
 	{
-		char input[50];
-
-		scanf("%49s", input);
-
-		if (strcmp(input, "dump") == 0)
+		if (run == false)
 		{
-			dump_memory();
-			continue;
-		}
-		else if (strcmp(input, "step") == 0)
-		{
-			// dont do anything, just execute the next loop
+			char input[50];
+
+			scanf("%49s", input);
+
+			if (strcmp(input, "dump") == 0)
+			{
+				dump_memory();
+				continue;
+			}
+			if (strcmp(input, "run") == 0)
+			{
+				run = true;
+				continue;
+			}
+			else if (strcmp(input, "step") == 0)
+			{
+				// dont do anything, just execute the next loop
+			}
 		}
 
 		if (context.PC != 0xFFF)
@@ -172,6 +183,7 @@ int main(int argc, char** argv)
 				// CLS - clear the display
 			case (0x00E0):
 				DEBUG_PRINT("Clearing the display with 00E0\n");
+				clear_display(context);
 				increment_pc();
 				continue;
 				break;
@@ -398,6 +410,7 @@ int main(int argc, char** argv)
 			}
 
 			increment_pc();
+
 
 			if (SDL_PollEvent(&context.event) && context.event.type == SDL_QUIT)
 				break;
