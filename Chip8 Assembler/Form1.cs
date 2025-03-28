@@ -30,7 +30,6 @@ namespace Chip8_Assembler
                 {
                     byte opcode = (byte)0xA;
                     UInt16 value = (UInt16)int.Parse((string)args[2]);
-                    byte sourceRegister = (byte)int.Parse(((string)args[2]).AsSpan(1));
                     UInt16 op = (UInt16)
                     (
                         (value) | // bits 0-11
@@ -103,6 +102,24 @@ namespace Chip8_Assembler
                     (drawBytesCount) | // bits 0-3
                     (argumentRegister2 << 4) | // bits 3-7
                     (argumentRegister1 << 8) | // bits 8-11
+                    (opcode << 12) // bits 12-15
+                );
+
+                return op;
+            };
+            operations["JP"] = (args) =>
+            {
+                if (args.Length != 2)
+                {
+                    throw new ArgumentException("Wrong number of arguments for JP");
+                }
+
+                UInt16 jAddr = (UInt16)int.Parse((string)args[1]);
+                byte opcode = 0x1;
+
+                UInt16 op = (UInt16)
+                (
+                    (jAddr) | // bits 0-11 
                     (opcode << 12) // bits 12-15
                 );
 

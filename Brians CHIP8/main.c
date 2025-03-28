@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 	size_t buffer_size = 4096;
 	size_t bytes_read;
 
-	file = fopen("G:\\Brians CHIP8\\Brians CHIP8\\test.ch8", "rb");
+	file = fopen("G:\\Brians CHIP8\\Brians CHIP8\\1-chip8-logo.ch8", "rb");
 	if (file == NULL)
 	{
 		perror("Failed to open file");
@@ -147,7 +147,13 @@ int main(int argc, char** argv)
 	// start at 0x200
 	context.PC = 0x200;
 
-	bool run = false;
+	bool run;
+
+#ifdef _DEBUG
+	run = false;
+#else
+	run = true;
+#endif
 
 	while (1) // main program loop
 	{
@@ -256,8 +262,8 @@ int main(int argc, char** argv)
 			else if ((op & 0xF000) == 0x6000)
 			{
 				uint8_t kk = op & 0x00FF; // mask first byte to get kk
-				context.V[(op & 0x0100) >> 0x8] = kk; // access Vk by masking first 4 bits and last byte then shifting over one byte")
-				DEBUG_PRINT("LD V%d with value %d\n", (op & 0x0100) >> 0x8, kk);
+				context.V[(op & 0x0F00) >> 0x8] = kk; // access Vk by masking first 4 bits and last byte then shifting over one byte")
+				DEBUG_PRINT("LD V%d with value 0x%x\n", (op & 0x0F00) >> 0x8, kk);
 			}
 			// 7xkk - ADD Vx, byte
 			else if ((op & 0xF000) == 0x7000)

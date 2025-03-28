@@ -13,7 +13,7 @@ void handle_1(uint16_t op, Chip8Context* context)
 void handle_A(uint16_t op, Chip8Context* context)
 {
 	*context->I = op & 0x0FFF;
-	DEBUG_PRINT("LD I with value %x\n", op & 0x0FFF);
+	DEBUG_PRINT("LD I with value 0x%x\n", op & 0x0FFF);
 }
 
 void handle_D(uint16_t op, Chip8Context* context)
@@ -21,6 +21,8 @@ void handle_D(uint16_t op, Chip8Context* context)
 	// get starting address of sprite
 	uint16_t start_address = *context->I;
 
+
+	printf("Registers for coords: %x, %x\n", ((op & 0x0F00) >> 0x8), ((op & 0x00F0) >> 0x4));
 	// get Vx, Vy
 	uint8_t Vx = context->V[(op & 0x0F00) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shifting right one byte
 	uint8_t Vy = context->V[(op & 0x00F0) >> 0x4]; // get Vx by masking highest 4 bits and lowest byte then shifting right one byte
