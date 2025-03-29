@@ -25,6 +25,19 @@
 
 Chip8Context context;
 
+void sdl_frame_cleanup(bool* running)
+{
+	SDL_RenderPresent(context.renderer);
+
+	while (SDL_PollEvent(&context.event))
+	{
+		if (context.event.type == SDL_QUIT)
+		{
+			*running = false;
+		}
+	}
+}
+
 void dump_memory()
 {
 	printf("MEMORY:\n");
@@ -43,7 +56,7 @@ void dump_memory()
 	printf("\n");
 
 	printf("PC: %02X\n", context.PC);
-	printf("SP: %02X\n", *context.SP);
+	printf("SP: %02X\n", context.SP);
 	printf("\n");
 }
 
@@ -64,16 +77,11 @@ int main(int argc, char** argv)
 	context.V = calloc((size_t)16, sizeof(uint8_t)); // 16 16-bit registers
 	if (context.V == NULL)
 		return -1;
-	context.I = malloc(sizeof(uint16_t)); // 16-bit
-	if (context.I == NULL)
-		return -1;
-	context.SP = malloc(sizeof(int8_t)); // 8-bit
-	if (context.SP == NULL)
-		return -1;
-	*context.SP = -(0x01); // set stack pointer to 0
+	context.I = 0;
 	context.stack = calloc((size_t)16, sizeof(uint8_t)); // 16 16-bit memory addresses
 	if (context.stack == NULL)
 		return -1;
+	context.SP = 0;
 	context.keyboard = malloc(sizeof(int16_t));
 	if (context.keyboard == NULL)
 		return -1;
@@ -96,7 +104,8 @@ int main(int argc, char** argv)
 	size_t buffer_size = 4096;
 	size_t bytes_read;
 
-	file = fopen("G:\\Brians CHIP8\\Brians CHIP8\\1-chip8-logo.ch8", "rb");
+	file = fopen("G:\\Brians CHIP8\\chip8-test-suite\\bin\\3-corax+.ch8", "rb");
+
 	if (file == NULL)
 	{
 		perror("Failed to open file");
@@ -148,6 +157,7 @@ int main(int argc, char** argv)
 	context.PC = 0x200;
 
 	bool run;
+	bool running = true;
 
 #ifdef _DEBUG
 	run = false;
@@ -155,8 +165,17 @@ int main(int argc, char** argv)
 	run = true;
 #endif
 
-	while (1) // main program loop
+	uint32_t lastTime = SDL_GetTicks();
+
+	while (running) // main program loop
 	{
+		uint32_t frameStart = SDL_GetTicks();
+
+		if (frameStart - lastTime < 17)
+			continue;
+
+		lastTime = frameStart;
+
 		if (run == false)
 		{
 			char input[50];
@@ -191,14 +210,17 @@ int main(int argc, char** argv)
 				DEBUG_PRINT("Clearing the display with 00E0\n");
 				clear_display(context);
 				increment_pc();
+				sdl_frame_cleanup(&running);
 				continue;
 				break;
 
 				// RET - return from subroutine
 			case (0x00EE):
-				context.PC = context.stack[*context.SP]; // set program counter to address on stack
-				*context.SP -= 0x01; // decrement stack pointer by 1;
+				context.SP -= 1; // decrement stack pointer by 1;
+				context.PC = context.stack[context.SP]; // set program counter to address on stack
+				DEBUG_PRINT("RET from subroutine. PC value to return to: %x", context.stack[context.SP]);
 				increment_pc();
+				sdl_frame_cleanup(&running);
 				continue;
 				break;
 
@@ -216,47 +238,30 @@ int main(int argc, char** argv)
 			else if ((op & 0xF000) == 0x1000)
 			{
 				handle_1(op, &context);
+				sdl_frame_cleanup(&running);
 				continue;
 			}
 			// 2nnn - CALL addr - call subroutine at nnn
 			else if ((op & 0xF000) == 0x2000)
 			{
-				printf("CALL\n");
-				*context.SP += 0x01; // increment the stack pointer
-				context.stack[*context.SP] = context.PC; // put PC on stack for return address
-				context.PC = 0x0111 & op; // set PC to subroutine address. 0x0111 is a mask to only get last three bits of opcode
+				handle_2(op, &context);
+				sdl_frame_cleanup(&running);
+				continue;
 			}
 			// 3xkk - SE Vx, byte - skip next instrcution if Vx = kk
 			else if ((op & 0xF000) == 0x3000)
 			{
-				printf("SE\n");
-				uint8_t Vx = context.V[(op & 0x0100) >> 0x8]; // get x by masking first and last two digits, then shift it right a byte to get single 16-bit index
-				uint8_t kk = op & 0x00FF; // mask front byte to get kk
-
-				if (Vx == kk) // if register is the same as value
-					context.PC += 0x002; // increment PC to skip
-
+				handle_3(op, &context);
 			}
 			// 4xkk - SNE Vx, byte - skip next instruction if Vx != kk
 			else if ((op & 0xF000) == 0x4000)
 			{
-				printf("SNE\n");
-				uint8_t Vx = context.V[(op & 0x0100) >> 0x8]; // get x by masking first and last two digits, then shift it right a byte to get single 16-bit index
-				uint8_t kk = op & 0x00FF; // maske first byte to get kk
-
-				if (Vx != kk)
-					context.PC += 0x002; // increment PC to skip
-
+				handle_4(op, &context);
 			}
 			// 5xy0 - SE Vx, Vy - skip next instruction if Vx != Vy
 			else if ((op & 0xF000) == 0x5000)
 			{
-				printf("SE\n");
-				uint8_t Vx = context.V[(op & 0x0100) >> 0x8]; // get x by masking first 4 bits and last byte then shifting over one byte
-				uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking first byte and last 4 bits then shifting over 4 bits
-
-				if (Vx == Vy) // check if registers are equal
-					context.PC += 0x002; // increment PC to skip
+				handle_5(op, &context);
 			}
 			// 6xkk - LD Vx, kk byte
 			else if ((op & 0xF000) == 0x6000)
@@ -268,101 +273,96 @@ int main(int argc, char** argv)
 			// 7xkk - ADD Vx, byte
 			else if ((op & 0xF000) == 0x7000)
 			{
-				printf("ADD\n");
-				uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and last byte then shifting right one byte
-				uint8_t kk = op & 0x00FF; // get kk by masking first byte
-
-				*Vx = *Vx + kk; // Vx += kk
+				handle_7(op, &context);
 			}
 			// 8 bitwise instructions
 			else if ((op & 0xF000) == 0x8000)
 			{
 				// 8xy0 - LD Vx, Vy - Set Vx = Vy
-				if ((op & 0xF000) == 0x8001) // check for ending 0
+				if ((op & 0xF00F) == 0x8000) // check for ending 0
 				{
 					printf("LD Vy\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vk = context.V[(op & 0x0010) >> 0x4];
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4];
+					*Vx = Vy;
 				}
 				// 8xy1 - OR Vx, Vy - Set Vx = Vx Bit-OR Vy
-				else if ((op & 0xF000) == 0x8001)
+				else if ((op & 0xF00F) == 0x8001)
 				{
 					printf("OR\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
 					*Vx = *Vx | Vy; // Vx = Vx or Vy
 				}
 				// 8xy2 - AND Vx, Vy - Set Vx = Vx Bit-AND Vy
-				else if ((op & 0xF000) == 0x8002)
+				else if ((op & 0xF00F) == 0x8002)
 				{
 					printf("AND\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
 					*Vx = *Vx & Vy; // Vx = Vx AND Vy
 				}
 				// 8xy3 - XOR Vx, Vy - Set Vx = Vx Bit-XOR Vy
-				else if ((op & 0xF000) == 0x8003)
+				else if ((op & 0xF00F) == 0x8003)
 				{
 					printf("XOR\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
 					*Vx = *Vx ^ Vy; // Vx = Vx Bit-XOR Vy
 				}
 				// 8xy4 - ADD Vx, Vy - Set Vx = Vx + Vy, Set VF as carry bit
-				else if ((op & 0xF000) == 0x8004)
+				else if ((op & 0xF00F) == 0x8004)
 				{
-					printf("ADD\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
 					uint16_t sum = *Vx + Vy; // add into a u16;
-					uint8_t carryBit = sum & 0x0100; // mask all bits except carry bit
+					uint8_t carryBit = (sum & 0x0100) >> 8; // mask all bits except carry bit, shift 8 bits to get it as carry bit
+					*Vx = sum;
 					context.V[0xF] = carryBit; // store carry bit in VF
+					DEBUG_PRINT("ADD, carry bit: %x\n", carryBit);
 				}
 				// 8xy5 - SUB Vx, Vy - Set Vx = Vx - Vy, Set VF = NOT borrow
-				else if ((op & 0xF000) == 0x8005)
+				else if ((op & 0xF00F) == 0x8005)
 				{
-					printf("SUB\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
+					context.V[0xF] = 0x00;
 					if (*Vx > Vy) // if Vx is greater than Vy
 						context.V[0xF] = 0x01; // Set VF to 1
 					*Vx -= Vy; // Subtract Vy from Vx, store in Vx
+					printf("SUB, borrow bit: %x\n", context.V[0xF]);
 				}
 				// 8xy6 - SHR Vx {, Vy} - Set Vx = Vx SHR 1
-				else if ((op & 0xF000) == 0x8006)
+				else if ((op & 0xF00F) == 0x8006)
 				{
 					printf("SHR\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get pointer to x by masking higher 4 bits and lower byte then shifting right one byte
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking higher 4 bits and lower byte then shifting right one byte
 					context.V[0xF] = *Vx & 0x01; // mask highest 7 bits then store in VF
 					*Vx /= 0x02; // divide by 
 				}
 				// 8xy7 - SUBN Vx, Vy - Set Vx = Vy - Vx, set VF = NOT BORROW
-				else if ((op & 0xF000) == 0x8007)
+				else if ((op & 0xF00F) == 0x8007)
 				{
 					printf("SUBN\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
-					uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get pointer to Vy by masking highest byte and lowest 4 bits then shift right 4 bits
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
+					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get pointer to Vy by masking highest byte and lowest 4 bits then shift right 4 bits
 					if (Vy > *Vx) // If Vy is larger than Vx
 						context.V[0xF] = 0x01; // set VF to true
 					*Vx = Vy - *Vx; // Subtract Vx from Vy, store result in Vx;
 				}
 				// 8xyE - SHL Vx {, Vy}
-				else if ((op & 0xF000) == 0x800E)
+				else if ((op & 0xF00F) == 0x800E)
 				{
 					printf("SHL\n");
-					uint8_t* Vx = &context.V[(op & 0x0100) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
-					context.V[0xF] = *Vx & 0x07 >> 0xF; // mask to get MSB, shift right 7 bits to get in lowest position, store in VF
+					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
+					context.V[0xF] = *Vx & 0x80 >> 0xF; // mask to get MSB, shift right 7 bits to get in lowest position, store in VF
 					*Vx *= 0x02; // set Vx = Vx * 2
 				}
 			}
 			// 9xy0 - SNE Vx, Vy - skip next instruction if Vx != Vy
 			else if ((op & 0xF000) == 0x9000)
 			{
-				printf("SNE\n");
-				uint8_t Vx = context.V[(op & 0x0100) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
-				uint8_t Vy = context.V[(op & 0x0010) >> 0x4]; // get Vy by masking highest byte and lowest 4 bits then shift right 4 bits
-				if (Vx != Vy) // if values of Vx != Vy
-					context.PC += 0x002; // skip next instruction
+				handle_9(op, &context);
 			}
 			// Annn - LD I, addr - The value of register I is set to nnn
 			else if ((op & 0xF000) == 0xA000)
@@ -417,9 +417,15 @@ int main(int argc, char** argv)
 
 			increment_pc();
 
+			SDL_RenderPresent(context.renderer);
 
-			if (SDL_PollEvent(&context.event) && context.event.type == SDL_QUIT)
-				break;
+			while (SDL_PollEvent(&context.event))
+			{
+				if (context.event.type == SDL_QUIT)
+				{
+					running = false;
+				}
+			}
 		}
 	}
 

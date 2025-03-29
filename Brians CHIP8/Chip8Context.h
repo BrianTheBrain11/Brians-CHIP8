@@ -18,13 +18,13 @@ typedef struct
 
 	// 1 16-bit register
 	// used to store memory addresses, only last 12 bits are used usually
-	uint16_t* I;
+	uint16_t I;
 
 	// 16-bit program counter
 	uint16_t PC;
 
 	// 8-bit stack pointer
-	int8_t* SP;
+	int8_t SP;
 
 	// 16 16-bit memory space for memory return addresses
 	uint16_t* stack;

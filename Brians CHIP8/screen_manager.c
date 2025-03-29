@@ -13,7 +13,15 @@
   ((byte) & 0x02 ? '1' : '0'), \
   ((byte) & 0x01 ? '1' : '0') 
 
+//#define GRAPHICS_DEBUG
 
+#ifdef GRAPHICS_DEBUG
+#ifdef _DEBUG
+#define GRAPHICS_DEBUG_PRINT printf
+#endif
+#else
+#define GRAPHICS_DEBUG_PRINT //
+#endif
 
 void clear_display(Chip8Context* context)
 {
@@ -70,10 +78,10 @@ void draw(uint8_t* sprite, size_t size_of_sprite, SpritePosition sprite_position
 
 
 
-		printf("row number: %d\n", i);
-		printf("sprite_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(sprite_row));
-		printf("video_mem_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(video_mem_row));
-		printf("new_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(new_row));
+		GRAPHICS_DEBUG_PRINT("row number: %d\n", i);
+		GRAPHICS_DEBUG_PRINT("sprite_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(sprite_row));
+		GRAPHICS_DEBUG_PRINT("video_mem_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(video_mem_row));
+		GRAPHICS_DEBUG_PRINT("new_row: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(new_row));
 
 
 		uint8_t first_mask = (0xFF << (8 - bit_index));
@@ -94,8 +102,8 @@ void draw(uint8_t* sprite, size_t size_of_sprite, SpritePosition sprite_position
 		*first_byte |= new_row >> bit_index;
 		*second_byte |= new_row << (8 - bit_index);*/
 
-		printf("new video mem row i: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(*first_byte));
-		printf("new video mem row i + 1: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(*second_byte));
+		GRAPHICS_DEBUG_PRINT("new video mem row i: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(*first_byte));
+		GRAPHICS_DEBUG_PRINT("new video mem row i + 1: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(*second_byte));
 
 		// now we actually draw this row
 		for (int pixel = 0; pixel < 8; pixel++)
@@ -112,6 +120,6 @@ void draw(uint8_t* sprite, size_t size_of_sprite, SpritePosition sprite_position
 			}
 		}
 
-		SDL_RenderPresent(context->renderer);
+		//SDL_RenderPresent(context->renderer);
 	}
 }

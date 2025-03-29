@@ -1,0 +1,1 @@
+This project includes the GPLv3-licensed tool "chip8-test-suite", which is distributed in its original, unmodified binary form. See the folder chip8-test-suite for license and source.
