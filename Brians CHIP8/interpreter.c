@@ -117,3 +117,47 @@ void handle_D(uint16_t op, Chip8Context* context)
 
 	DEBUG_PRINT("DRW at %d, %d, 0x%x bytes from 0x%x\n", Vx, Vy, (unsigned int)sprite_length, start_address);
 }
+
+void handle_F1E(uint16_t op, Chip8Context* context)
+{
+	uint8_t x = ((op & 0x0F00) >> 0x8);
+	uint8_t Vx = context->V[x];
+	context->I += Vx;
+	DEBUG_PRINT("ADD I += V%x\n", x);
+}
+
+void handle_F33(uint16_t op, Chip8Context* context)
+{
+	uint8_t x = ((op & 0x0F00) >> 0x8);
+	uint8_t Vx = context->V[x];
+
+	DEBUG_PRINT("LD register V%x into memory with BCD representation starting at I: %x", x, context->I);
+
+	context->memoryMap[context->I] = Vx / 100;
+	context->memoryMap[context->I + 1] = (Vx / 10) % 10;
+	context->memoryMap[context->I + 2] = Vx % 10; // dividing by 1 doesn't do anything but for consistencies sake
+}
+
+void handle_F55(uint16_t op, Chip8Context* context)
+{
+	uint8_t finalRegisterIndex = ((op & 0x0F00) >> 0x8);
+
+	DEBUG_PRINT("LD up to V%x into memory starting at I: %x", finalRegisterIndex, context->I);
+
+	for (int x = 0; x <= finalRegisterIndex; x++)
+	{
+		context->memoryMap[context->I + x] = context->V[x];
+	}
+}
+
+void handle_F65(uint16_t op, Chip8Context* context)
+{
+	uint8_t finalRegisterIndex = ((op & 0x0F00) >> 0x8);
+
+	DEBUG_PRINT("LD into registers upto V%x starting at I: %x", finalRegisterIndex, context->I);
+
+	for (int x = 0; x <= finalRegisterIndex; x++)
+	{
+		context->V[x] = context->memoryMap[context->I + x];
+	}
+}

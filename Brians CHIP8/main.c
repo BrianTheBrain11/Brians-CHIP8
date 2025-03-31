@@ -230,6 +230,7 @@ int main(int argc, char** argv)
 			}
 
 			// 0nnn - SYS addr - jump to machine code routine at nnn -- no op in modern interpreters 
+
 			if (0) // check if all 0 todo: fix
 			{
 				printf("falling in here for some reason\n");
@@ -407,7 +408,22 @@ int main(int argc, char** argv)
 			// 0xF--- fall into the F opcodes
 			else if ((op & 0xF000) == 0xF000)
 			{
-				printf("F\n");
+				if ((op & 0xF0FF) == 0xF01E)
+				{
+					handle_F1E(op, &context);
+				}
+				else if ((op & 0xF0FF) == 0xF033)
+				{
+					handle_F33(op, &context);
+				}
+				else if ((op & 0xF0FF) == 0xF055)
+				{
+					handle_F55(op, &context);
+				}
+				else if ((op & 0xF0FF) == 0xF065)
+				{
+					handle_F65(op, &context);
+				}
 			}
 			else
 			{

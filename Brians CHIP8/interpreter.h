@@ -40,4 +40,16 @@ void handle_A(uint16_t op, Chip8Context* context);
 // Dxyn - DRW Vx, Vy, n - display n-bytes sprite starting at memory location I at (Vx, Vy), set VF = collision
 void handle_D(uint16_t op, Chip8Context* context);
 
+// Fx1E - ADD I, Vx: Set I = I + Vx
+void handle_F1E(uint16_t op, Chip8Context* context);
+
+// Fx33 - LD B, Vx: store BCD representation of Vx in memory locations I, I+1, and I. The interpreter takes the decimal value of Vx, and places hundreds, tens, ones into location I starting at I
+void handle_F33(uint16_t op, Chip8Context* context);
+
+// Fx55 - LD [I], Vx: store V0 through Vx into memory starting at I
+void handle_F55(uint16_t op, Chip8Context* context);
+
+// Fx65 - LD Vx, [I]: Load V0 through Vx from incrementing from location I
+void handle_F65(uint16_t op, Chip8Context* context);
+
 InstructionHandler* handler_table;
