@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 	size_t buffer_size = 4096;
 	size_t bytes_read;
 
-	file = fopen("G:\\Brians CHIP8\\chip8-test-suite\\bin\\3-corax+.ch8", "rb");
+	file = fopen("G:\\Brians CHIP8\\chip8-test-suite\\bin\\4-flags.ch8", "rb");
 
 	if (file == NULL)
 	{
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 	{
 		uint32_t frameStart = SDL_GetTicks();
 
-		if (frameStart - lastTime < 17)
+		if (frameStart - lastTime < 5)
 			continue;
 
 		lastTime = frameStart;
@@ -317,7 +317,12 @@ int main(int argc, char** argv)
 					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
 					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
 					uint16_t sum = *Vx + Vy; // add into a u16;
-					uint8_t carryBit = (sum & 0x0100) >> 8; // mask all bits except carry bit, shift 8 bits to get it as carry bit
+					uint8_t carryBit = 0;
+					if (sum > 255)
+					{
+						carryBit = 1;
+						sum %= 256;
+					}
 					*Vx = sum;
 					context.V[0xF] = carryBit; // store carry bit in VF
 					DEBUG_PRINT("ADD, carry bit: %x\n", carryBit);
@@ -325,39 +330,50 @@ int main(int argc, char** argv)
 				// 8xy5 - SUB Vx, Vy - Set Vx = Vx - Vy, Set VF = NOT borrow
 				else if ((op & 0xF00F) == 0x8005)
 				{
-					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking first 4 bits and lower byte then shifting right one byte
+					uint8_t x = ((op & 0x0F00) >> 0x8);
+					uint8_t Vx = context.V[x]; // get x by masking first 4 bits and lower byte then shifting right one byte
 					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get y by masking higher byte and lower 4 bits
+
+					context.V[x] -= Vy; // Subtract Vy from Vx, store in Vx
+
 					context.V[0xF] = 0x00;
-					if (*Vx > Vy) // if Vx is greater than Vy
+					if (Vx >= Vy) // if Vx is greater than Vy
 						context.V[0xF] = 0x01; // Set VF to 1
-					*Vx -= Vy; // Subtract Vy from Vx, store in Vx
-					printf("SUB, borrow bit: %x\n", context.V[0xF]);
+
+					DEBUG_PRINT("SUB, borrow bit: %x\n", context.V[0xF]);
 				}
 				// 8xy6 - SHR Vx {, Vy} - Set Vx = Vx SHR 1
 				else if ((op & 0xF00F) == 0x8006)
 				{
 					printf("SHR\n");
-					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get pointer to x by masking higher 4 bits and lower byte then shifting right one byte
-					context.V[0xF] = *Vx & 0x01; // mask highest 7 bits then store in VF
-					*Vx /= 0x02; // divide by 
+					uint8_t x = ((op & 0x0F00) >> 0x8);
+					uint8_t Vx = context.V[x]; // get pointer to x by masking higher 4 bits and lower byte then shifting right one byte
+					context.V[x] /= 0x02; // divide by 2
+					context.V[0xF] = Vx & 0x01; // mask highest 7 bits then store in VF
 				}
 				// 8xy7 - SUBN Vx, Vy - Set Vx = Vy - Vx, set VF = NOT BORROW
 				else if ((op & 0xF00F) == 0x8007)
 				{
 					printf("SUBN\n");
-					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
+					uint8_t x = ((op & 0x0F00) >> 0x8);
+					uint8_t Vx = context.V[x]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
 					uint8_t Vy = context.V[(op & 0x00F0) >> 0x4]; // get pointer to Vy by masking highest byte and lowest 4 bits then shift right 4 bits
-					if (Vy > *Vx) // If Vy is larger than Vx
+					Vx = Vy - Vx; // Subtract Vx from Vy, store result in Vx;
+
+					context.V[x] = Vx;
+
+					context.V[0xF] = 0x00;
+					if (Vy >= Vx) // If Vy is larger than Vx
 						context.V[0xF] = 0x01; // set VF to true
-					*Vx = Vy - *Vx; // Subtract Vx from Vy, store result in Vx;
 				}
 				// 8xyE - SHL Vx {, Vy}
 				else if ((op & 0xF00F) == 0x800E)
 				{
 					printf("SHL\n");
-					uint8_t* Vx = &context.V[(op & 0x0F00) >> 0x8]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
-					context.V[0xF] = *Vx & 0x80 >> 0xF; // mask to get MSB, shift right 7 bits to get in lowest position, store in VF
-					*Vx *= 0x02; // set Vx = Vx * 2
+					uint8_t x = ((op & 0x0F00) >> 0x8);
+					uint8_t Vx = context.V[x]; // get Vx by masking highest 4 bits and lowest byte then shift right one byte
+					context.V[x] *= 0x02; // set Vx = Vx * 2
+					context.V[0xF] = (Vx & 0x80) >> 0x7; // mask to get MSB, shift right 7 bits to get in lowest position, store in VF
 				}
 			}
 			// 9xy0 - SNE Vx, Vy - skip next instruction if Vx != Vy
