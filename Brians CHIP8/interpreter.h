@@ -40,6 +40,9 @@ void handle_A(uint16_t op, Chip8Context* context);
 // Dxyn - DRW Vx, Vy, n - display n-bytes sprite starting at memory location I at (Vx, Vy), set VF = collision
 void handle_D(uint16_t op, Chip8Context* context);
 
+// Fx0A - LD Vx, K: block until a keypress, store in Vx
+void handle_F0A(uint16_t op, Chip8Context* context);
+
 // Fx1E - ADD I, Vx: Set I = I + Vx
 void handle_F1E(uint16_t op, Chip8Context* context);
 

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <memory.h>
+#include <SDL.h>
 #include "screen_manager.h"
 
 void handle_1(uint16_t op, Chip8Context* context)
@@ -116,6 +117,84 @@ void handle_D(uint16_t op, Chip8Context* context)
 	draw(sprite, sprite_length, sprite_position, context);
 
 	DEBUG_PRINT("DRW at %d, %d, 0x%x bytes from 0x%x\n", Vx, Vy, (unsigned int)sprite_length, start_address);
+}
+
+void handle_F0A(uint16_t op, Chip8Context* context)
+{
+	DEBUG_PRINT("LD Vx, K");
+
+	uint32_t lastTime = SDL_GetTicks();
+
+	uint8_t* Vx = ((op & 0x0F00) >> 0x8);
+
+	while (1)
+	{
+		uint32_t frameStart = SDL_GetTicks();
+		if (frameStart - lastTime > INSTRUCTION_CYCLE)
+		{
+			while (SDL_PollEvent(&context->event))
+			{
+				if (context->event.type == SDL_KEYDOWN)
+				{
+					SDL_Keycode key = context->event.key.keysym.sym;  // Get the key code
+					switch (key)
+					{
+					case SDLK_1:
+						*Vx = 0x1;
+						break;
+					case SDLK_2:
+						*Vx = 0x2;
+						break;
+					case SDLK_3:
+						*Vx = 0x3;
+						break;
+					case SDLK_4:
+						*Vx = 0xC;
+						break;
+					case SDLK_q:
+						*Vx = 0x4;
+						break;
+					case SDLK_w:
+						*Vx = 0x5;
+						break;
+					case SDLK_e:
+						*Vx = 0x6;
+						break;
+					case SDLK_r:
+						*Vx = 0xD;
+						break;
+					case SDLK_a:
+						*Vx = 0x7;
+						break;
+					case SDLK_s:
+						*Vx = 0x8;
+						break;
+					case SDLK_d:
+						*Vx = 0x9;
+						break;
+					case SDLK_f:
+						*Vx = 0xE;
+						break;
+					case SDLK_z:
+						*Vx = 0xA;
+						break;
+					case SDLK_x:
+						*Vx = 0x0;
+						break;
+					case SDLK_c:
+						*Vx = 0xB;
+						break;
+					case SDLK_v:
+						*Vx = 0xF;
+						break;
+					}
+
+					continue;
+				}
+			}
+			lastTime = frameStart;
+		}
+	}	
 }
 
 void handle_F1E(uint16_t op, Chip8Context* context)

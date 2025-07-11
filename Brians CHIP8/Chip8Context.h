@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <SDL.h>
 
+#define INSTRUCTION_CYCLE 17
+
 typedef struct
 {
 	// 4096 bytes of RAM

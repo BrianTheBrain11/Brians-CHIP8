@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 	size_t buffer_size = 4096;
 	size_t bytes_read;
 
-	file = fopen("G:\\Brians CHIP8\\chip8-test-suite\\bin\\4-flags.ch8", "rb");
+	file = fopen("G:\\Brians CHIP8\\chip8-test-suite\\bin\\6-keypad.ch8", "rb");
 
 	if (file == NULL)
 	{
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 	{
 		uint32_t frameStart = SDL_GetTicks();
 
-		if (frameStart - lastTime < 5)
+		if (frameStart - lastTime < INSTRUCTION_CYCLE)
 			continue;
 
 		lastTime = frameStart;
@@ -424,7 +424,11 @@ int main(int argc, char** argv)
 			// 0xF--- fall into the F opcodes
 			else if ((op & 0xF000) == 0xF000)
 			{
-				if ((op & 0xF0FF) == 0xF01E)
+				if ((op & 0xF0FF) == 0xF00A)
+				{
+					handle_F0A(op, &context);
+				}
+				else if ((op & 0xF0FF) == 0xF01E)
 				{
 					handle_F1E(op, &context);
 				}
